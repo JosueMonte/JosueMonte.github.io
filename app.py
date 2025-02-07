@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Función para calcular el momentum
 
@@ -256,62 +258,64 @@ if st.button("Ejecutar Backtest"):
     # Calcular la c7o   orrelación entre los activos
     correlation_matrix = monthly_returns.corr()
 
+    # Imprimir el total de cambios de activos
+    print(
+        f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
+
+    # Graficar el valor del portafolio en escala logarítmica
+    plt.figure(figsize=(12, 6))
+    plt.semilogy(portfolio_values_series_teorico, label='Valor del Portafolio')
+    plt.title(
+        'Valor del Portafolio Basado en Estrategia de Momentum (Escala Logarítmica)')
+    plt.xlabel('Fecha')
+    plt.ylabel('Valor del Portafolio (log)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Graficar el rendimiento acumulado del portafolio
+    plt.figure(figsize=(12, 6))
+    # Agregar 1 para evitar log(0)
+    plt.semilogy(cumulative_returns_teorico + 1,
+                 label='Rendimiento Acumulado del Portafolio')
+    plt.title(
+        'Rendimiento Acumulado del Portafolio Basado en Estrategia de Momentum')
+    plt.xlabel('Fecha')
+    plt.ylabel('Rendimiento Acumulado')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Mostrar las métricas del portafolio
+    print(
+        f"Rendimiento final del portafolio teórico: {return_period_teorico:.2%}")
+    print(f"Rendimiento final del portafolio real: {return_period_real:.2%}")
+    print(
+        f"Rendimiento anualizado del portafolio teórico: {annualized_return_teorico:.2%}")
+    print(
+        f"Rendimiento anualizado del portafolio real: {annualized_return_real:.2%}")
+    print(
+        f"Pérdida porcentual total por coste operacional: {(return_period_real / return_period_teorico - 1):.2%}")
+    print(
+        f"Pérdida porcentual anualizada por coste operacional: {(annualized_return_real / annualized_return_teorico - 1):.2%}")
+    print(f"Volatilidad anualizada del portafolio: {volatility:.2%}")
+    print(f"Ratio de Sharpe: {sharpe:.2f}")
+    print(f"Ratio de Sortino: {sortino:.2f}")
+    print(f"Máximo Drawdown porcentual: {max_dd:.2%}")
+    print(f"Peor año: {worst_yr} con un rendimiento de {worst_yr_return:.2%}")
+    print(f"Mejor año: {best_yr} con un rendimiento de {best_yr_return:.2%}")
+
+    # Mostrar la correlación entre los activos
+    print("Correlación entre los activos:")
+    print(correlation_matrix)
+
+    # Mostrar la correlación entre los activos con un mapa de calor
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(correlation_matrix, annot=True,
+                cmap='coolwarm', center=0, vmin=-1, vmax=1)
+    plt.title('Matriz de Correlación entre los Activos')
+    plt.show()
+
 
 # Mostrar resultados del backtest
 st.write("Resultados del backtest para la estrategia seleccionada y los activos elegidos.")
-
-# Imprimir el total de cambios de activos
-print(
-    f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
-
-# Graficar el valor del portafolio en escala logarítmica
-plt.figure(figsize=(12, 6))
-plt.semilogy(portfolio_values_series_teorico, label='Valor del Portafolio')
-plt.title(
-    'Valor del Portafolio Basado en Estrategia de Momentum (Escala Logarítmica)')
-plt.xlabel('Fecha')
-plt.ylabel('Valor del Portafolio (log)')
-plt.legend()
-plt.grid(True)
-plt.show()
-
-# Graficar el rendimiento acumulado del portafolio
-plt.figure(figsize=(12, 6))
-# Agregar 1 para evitar log(0)
-plt.semilogy(cumulative_returns_teorico + 1,
-             label='Rendimiento Acumulado del Portafolio')
-plt.title('Rendimiento Acumulado del Portafolio Basado en Estrategia de Momentum')
-plt.xlabel('Fecha')
-plt.ylabel('Rendimiento Acumulado')
-plt.legend()
-plt.grid(True)
-plt.show()
-
-# Mostrar las métricas del portafolio
-print(f"Rendimiento final del portafolio teórico: {return_period_teorico:.2%}")
-print(f"Rendimiento final del portafolio real: {return_period_real:.2%}")
-print(
-    f"Rendimiento anualizado del portafolio teórico: {annualized_return_teorico:.2%}")
-print(
-    f"Rendimiento anualizado del portafolio real: {annualized_return_real:.2%}")
-print(
-    f"Pérdida porcentual total por coste operacional: {(return_period_real / return_period_teorico - 1):.2%}")
-print(
-    f"Pérdida porcentual anualizada por coste operacional: {(annualized_return_real / annualized_return_teorico - 1):.2%}")
-print(f"Volatilidad anualizada del portafolio: {volatility:.2%}")
-print(f"Ratio de Sharpe: {sharpe:.2f}")
-print(f"Ratio de Sortino: {sortino:.2f}")
-print(f"Máximo Drawdown porcentual: {max_dd:.2%}")
-print(f"Peor año: {worst_yr} con un rendimiento de {worst_yr_return:.2%}")
-print(f"Mejor año: {best_yr} con un rendimiento de {best_yr_return:.2%}")
-
-# Mostrar la correlación entre los activos
-print("Correlación entre los activos:")
-print(correlation_matrix)
-
-# Mostrar la correlación entre los activos con un mapa de calor
-plt.figure(figsize=(10, 8))
-sns.heatmap(correlation_matrix, annot=True,
-            cmap='coolwarm', center=0, vmin=-1, vmax=1)
-plt.title('Matriz de Correlación entre los Activos')
-plt.show()
