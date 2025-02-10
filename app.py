@@ -6,6 +6,29 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Título de la aplicación
+st.title("Simulador de Estrategias de Inversión")
+
+# Selección de estrategia de inversión
+estrategia = st.selectbox("Elige una estrategia de inversión",
+                          ["Estrategia de momentum con el mejor activo según Ivy Portfolio",
+                           "Estrategia de momentum con los mejores dos activos según Ivy Portfolio",
+                           "Estrategia de momentum con los mejores tres activos según Ivy Portfolio",
+                           "Estrategia de rebalanceo con los 5 activos según Ivy Portfolio"])
+
+# Selección de activos
+activos = st.multiselect("Selecciona los activos", [
+                         "SPY", "EFA", "IYR", "GSG", "AGG"])
+
+# Parámetros para el backtest
+parametros = st.slider(
+    "Selecciona el rango de fechas para el backtest:",
+    min_value=datetime(2012, 1, 1),
+    max_value=datetime.today(),
+    value=(datetime(2012, 1, 1), datetime.today())
+)
+
+# Definición de funciones
 # Función para calcular el momentum
 
 
@@ -23,6 +46,7 @@ def get_historical_data(tickers, start_date, end_date):
 # Función para calcular el Ratio de Sharpe
 
 
+# Revisar risk_free_rate=0.03 porque me termina dando negativo el ratio Sharpe
 def sharpe_ratio(returns, risk_free_rate=0.00):
     excess_returns = returns - risk_free_rate
     return np.mean(excess_returns) / np.std(excess_returns)
@@ -30,6 +54,7 @@ def sharpe_ratio(returns, risk_free_rate=0.00):
 # Función para calcular el Ratio de Sortino
 
 
+# Revisar risk_free_rate=0.03 porque me termina dando negativo el ratio Sortino
 def sortino_ratio(returns, risk_free_rate=0.00):
     excess_returns = returns - risk_free_rate
     negative_returns = excess_returns[excess_returns < 0]
@@ -67,255 +92,277 @@ def best_year(data):
     return best_year, best_year_return
 
 
-# Título de la aplicación
-st.title("Simulador de Estrategias de Inversión")
+# Mostrar resultados del backtest
+st.write("Resultados del backtest para la estrategia seleccionada y los activos elegidos.")
 
-# Selección de estrategia de inversión
-estrategia = st.selectbox("Elige una estrategia de inversión",
-                          ["Estrategia de momentum con el mejor activo según Ivy Portfolio",
-                           "Estrategia de momentum con los mejores dos activos según Ivy Portfolio",
-                           "Estrategia de momentum con los mejores tres activos según Ivy Portfolio",
-                           "Estrategia de rebalanceo con los 5 activos según Ivy Portfolio"])
-
-# Selección de activos
-activos = st.multiselect("Selecciona los activos", [
-                         "SPY", "EFA", "IYR", "GSG", "AGG"])
-
-# Parámetros para el backtest
-parametros = st.slider("Selecciona el rango de fechas para el backtest:", datetime(
-    2012, 1, 1), datetime(2024, 12, 31))
 
 # Botón para ejecutar el backtest
 if st.button("Ejecutar Backtest"):
-    start_date = parametros[0]
-    end_date = parametros[1]
+    start_date, end_date = parametros
+    st.write("Rango de fechas seleccionado:", start_date.strftime(
+        '%Y-%m-%d'), "a", end_date.strftime('%Y-%m-%d'))
 
     # Fechas de inicio y fin para obtener los datos históricos
-    total_period_years = end_date.year - start_date.year - 1
-    start_dat = end_date.replace(year=end_date.year - total_period_years)
-    start_dat -= timedelta(days=1)
-    start_dat = start_dat.strftime('%Y-%m-%d')
+today = datetime.today()
+end_date = today
+start_date = datetime(2024, 1, 1)
 
-    # Obtener los datos históricos de los activos
-    historical_data = get_historical_data(activos, start_date, end_date)
+# Calculate the difference in months
+difference_months = (end_date.year - start_date.year - 1) * \
+    12 + end_date.month - start_date.month
 
-    # Calcular los retornos mensuales
-    monthly_prices = historical_data.resample('ME').ffill()
-    monthly_returns = monthly_prices.pct_change()
+# Convert the difference in months to years
+total_period_years_months = difference_months / 12
 
-    # Definir el periodo de lookback para el momentum
-    lookback_period = 10
+total_period_years = end_date.year - start_date.year
+start_dat = start_date + relativedelta(months=-9)
+start_dat = start_dat.strftime('%Y-%m-%d')
 
-    # Calcular el momentum para cada activo
-    momentum = calculate_momentum(monthly_prices, lookback_period)
+print('start_date', start_date)
+print('start_dat', start_dat)
+print('end_date', end_date)
+print("difference_months", difference_months)
+print('total_period_years_months', total_period_years_months)
 
-    # Inicializar una lista para almacenar las decisiones de inversión mensuales y valores de portafolio
-    investment_decisions = []
-    portfolio_values_teorico = []
-    portfolio_values_real = []
-    rendimiento = []
-    rendimiento_acumulado = []
+# Obtener los datos históricos de los activos
+historical_data = get_historical_data(tickers, start_dat, end_date)
 
-    # Inicializar el valor del portafolio teórico (sin comisiones)
-    initial_portfolio_value_teorico = 10000
-    portfolio_value_teorico = initial_portfolio_value_teorico
+# Calcular los retornos mensuales
+monthly_prices = historical_data.resample('ME').ffill()
+monthly_returns = monthly_prices.pct_change()
 
-    # Costos por comisión y spread compra-venta (faltan los impuestos) - Revisar estructura de costes de IBKR
-    commision_buy = 0.0005
-    commision_sell = 0.0005
-    spread_buy = 0.00025
-    spread_sell = 0.00025
-    cost_operational = commision_buy + commision_sell + spread_buy + spread_sell
+# Definir el periodo de lookback para el momentum
+lookback_period = 10
 
-    # Inicializar el valor del portafolio real (con comisiones)
-    initial_portfolio_value_real = initial_portfolio_value_teorico * \
-        (1 - (commision_buy + spread_buy))
-    portfolio_value_real = initial_portfolio_value_real
+# Calcular el momentum para cada activo
+momentum = calculate_momentum(monthly_prices, lookback_period)
 
-    # Simular la compra del activo con mejor momentum y rebalanceo mensual
-    for date in momentum.index[lookback_period:]:
-        # Seleccionar los datos hasta la fecha actual
-        current_momentum = momentum.loc[:date].iloc[-1]
+# Calcular el momentum para cada activo y agregarlos a un DataFrame
+df_momentum = pd.DataFrame()
 
-        # Encontrar el activo con el mejor momentum y su resultado de momentum
-        best_asset = current_momentum.idxmax()
-        best_momentum = current_momentum[best_asset]
+for ticker in tickers:
+    df_momentum[ticker +
+                '_mom'] = calculate_momentum(monthly_prices[ticker], lookback_period)
 
-        # Calcular el precio promedio del mejor activo en los últimos 10 meses
-        last_10_months_prices = monthly_prices[best_asset].loc[:date].iloc[-lookback_period:]
-        average_price = last_10_months_prices.mean()
+# Inicializar una lista para almacenar las decisiones de inversión mensuales y valores de portafolio
+investment_decisions = []
+portfolio_values_teorico = []
+portfolio_values_real = []
+rendimiento = []
+rendimiento_acumulado = []
 
-        # Calcular el rendimiento del activo seleccionado en el último mes
-        asset_return = monthly_returns.loc[date, best_asset]
+# Inicializar el valor del portafolio teórico (sin comisiones)
+initial_portfolio_value_teorico = 10000
+portfolio_value_teorico = initial_portfolio_value_teorico
 
-        # Actualizar el valor del portafolio
-        portfolio_value_teorico *= (1 + asset_return)
+# Costos por comisión y spread compra-venta (faltan los impuestos) - Revisar estructura de costes de IBKR
+commision_buy = 0.0025
+commision_sell = 0.0025
+spread_buy = 0.00000
+spread_sell = 0.00000
+cost_operational = commision_buy + commision_sell + spread_buy + spread_sell
 
-        # Registrar la decisión de inversión y el valor del portafolio teórico
-        investment_decisions.append(
-            (date, best_asset, asset_return, portfolio_value_teorico))
-        portfolio_values_teorico.append(portfolio_value_teorico)
-        rendimiento.append(1 + asset_return)
+# Inicializar el valor del portafolio real (con comisiones)
+initial_portfolio_value_real = initial_portfolio_value_teorico * \
+    (1 - (commision_buy + spread_buy))
+portfolio_value_real = initial_portfolio_value_real
 
-    # Calcular los rendimientos acumulados
-    for i in range(len(rendimiento)):
-        if i == 0:
-            rendimiento_acumulado.append(rendimiento[i])
-        else:
-            rendimiento_acumulado.append(
-                rendimiento_acumulado[i-1] * rendimiento[i])
+# Itera sobre las fechas desde el día anterior al lookback_period hasta el final
+for date in momentum.index[lookback_period:]:
+    # Seleccionar los datos hasta la fecha anterior
+    previous_date = momentum.index[momentum.index.get_loc(date) - 1]
+    previous_momentum = momentum.loc[previous_date]
 
-    # Inicializar una variable para contar los cambios de activos
-    change_count = 0
-    # Iterar sobre las decisiones de inversión
-    prev_asset = None
-    index_change = []
-    for decision in investment_decisions:
-        current_asset = decision[1]
-        if prev_asset is not None and current_asset != prev_asset:
-            change_count += 1
-            index_change.append(change_count)
-        else:
-            index_change.append(0)
-        prev_asset = current_asset
+    # Encontrar el activo con el mejor momentum y su resultado de momentum del día anterior
+    best_asset = previous_momentum.idxmax()
+    best_momentum = previous_momentum[best_asset]
 
-    # Reemplazar números distintos de cero por 1
-    operations = [1 if x != 0 else 0 for x in index_change]
+    if best_momentum < 0:
+        best_momentum = 0
+        best_asset = 'BIL'
 
-    # Calcular el valor del portafolio real tomando en cuenta los costos operacionales
-    for i in range(len(rendimiento)):
-        # Aplicar el rendimiento del activo
-        portfolio_value_real *= rendimiento[i]
-        # Descontar el costo operacional si hay un cambio de activo
-        if operations[i] == 1:
-            portfolio_value_real *= (1 - cost_operational)
-        portfolio_values_real.append(portfolio_value_real)
+    # Obtener el precio mensual del mejor activo para la fecha actual
+    if date in monthly_prices.index:
+        best_monthly_price = monthly_prices.loc[date, best_asset]
+    else:
+        best_monthly_price = monthly_prices[best_asset].loc[:date].iloc[-1]
 
-    # Convertir los valores de portafolio en una serie de pandas
-    portfolio_values_series_teorico = pd.Series(
-        data=portfolio_values_teorico, index=momentum.index[lookback_period:])
-    portfolio_values_series_real = pd.Series(
-        data=portfolio_values_real, index=momentum.index[lookback_period:])
+    # Calcular el precio promedio del mejor activo en los últimos 10 meses
+    last_10_months_prices = monthly_prices[best_asset].loc[:date].iloc[-lookback_period:]
+    average_price = last_10_months_prices.mean()
 
-    # Calcular el rendimiento acumulado del portafolio
-    cumulative_returns_teorico = portfolio_values_series_teorico / \
-        initial_portfolio_value_teorico - 1
-    cumulative_returns_real = portfolio_values_series_real / \
-        initial_portfolio_value_teorico - 1
+    # Calcular el rendimiento del activo seleccionado en el último mes
+    asset_return = monthly_returns.loc[date, best_asset]
 
-    # Calcular el rendimiento anualizado del portafolio
-    annualized_return_teorico = (
-        portfolio_values_series_teorico.iloc[-1] / initial_portfolio_value_teorico) ** (1 / total_period_years) - 1
-    annualized_return_real = (
-        portfolio_values_series_real.iloc[-1] / initial_portfolio_value_teorico) ** (1 / total_period_years) - 1
+    # Actualizar el valor del portafolio
+    portfolio_value_teorico *= (1 + asset_return)
 
-    # Calcular la volatilidad del portafolio
-    volatility = portfolio_values_series_teorico.pct_change(
-    ).std() * np.sqrt(12)  # Anualizar la volatilidad
+    # Registrar la decisión de inversión y el valor del portafolio teórico
+    investment_decisions.append((date, best_asset, asset_return,
+                                portfolio_value_teorico, best_monthly_price, average_price, best_momentum))
+    portfolio_values_teorico.append(portfolio_value_teorico)
+    rendimiento.append(1 + asset_return)
 
-    # Calcular el Ratio de Sharpe
-    sharpe = sharpe_ratio(portfolio_values_series_teorico.pct_change())
+# Calcular los rendimientos acumulados
+for i in range(len(rendimiento)):
+    if i == 0:
+        rendimiento_acumulado.append(rendimiento[i])
+    else:
+        rendimiento_acumulado.append(
+            rendimiento_acumulado[i-1] * rendimiento[i])
 
-    # Calcular el Ratio de Sortino
-    sortino = sortino_ratio(portfolio_values_series_teorico.pct_change())
+# Inicializar una variable para contar los cambios de activos
+change_count = 0
+# Iterar sobre las decisiones de inversión
+prev_asset = None
+index_change = []
+for decision in investment_decisions:
+    current_asset = decision[1]
+    if prev_asset is not None and current_asset != prev_asset:
+        change_count += 1
+        index_change.append(change_count)
+    else:
+        index_change.append(0)
+    prev_asset = current_asset
 
-    # Calcular el Máximo Drawdown
-    max_dd = calculate_max_drawdown(
-        portfolio_values_series_teorico.pct_change())
+# Reemplazar números distintos de cero por 1
+operations = [1 if x != 0 else 0 for x in index_change]
 
-    # Calcular el peor año
-    portfolio_returns = pd.DataFrame(
-        {'date': portfolio_values_series_teorico.index, 'return': portfolio_values_series_teorico.pct_change()})
-    worst_yr, worst_yr_return = worst_year(portfolio_returns)
+# Calcular el valor del portafolio real tomando en cuenta los costos operacionales
+for i in range(len(rendimiento)):
+    # Aplicar el rendimiento del activo
+    portfolio_value_real *= rendimiento[i]
+    # Descontar el costo operacional si hay un cambio de activo
+    if operations[i] == 1:
+        portfolio_value_real *= (1 - cost_operational)
+    portfolio_values_real.append(portfolio_value_real)
 
-    # Calcular el mejor año
-    portfolio_returns = pd.DataFrame(
-        {'date': portfolio_values_series_teorico.index, 'return': portfolio_values_series_teorico.pct_change()})
-    best_yr, best_yr_return = best_year(portfolio_returns)
+# Convertir los valores de portafolio en una serie de pandas
+portfolio_values_series_teorico = pd.Series(
+    data=portfolio_values_teorico, index=momentum.index[lookback_period:])
+portfolio_values_series_real = pd.Series(
+    data=portfolio_values_real, index=momentum.index[lookback_period:])
 
-    # Mostrar las decisiones de inversión
-    df_backtesting = pd.DataFrame(data=investment_decisions, columns=[
-                                  'Fecha', 'Activo', 'Rendimiento', 'Portfolio_teórico'])
-    df_backtesting['Fecha'] = df_backtesting['Fecha'].dt.strftime('%Y-%m-%d')
-    df_backtesting['Operaciones'] = operations
-    df_backtesting['Rendimiento_acumulado'] = rendimiento_acumulado
-    df_backtesting['Portfolio_real'] = portfolio_values_real
+# Calcular el rendimiento acumulado del portafolio
+cumulative_returns_teorico = portfolio_values_series_teorico / \
+    initial_portfolio_value_teorico - 1
+cumulative_returns_real = portfolio_values_series_real / \
+    initial_portfolio_value_teorico - 1
 
-    # Datos de la nueva fila
-    portfolio_initial = pd.DataFrame({'Fecha': [start_dat], 'Activo': [0], 'Rendimiento': [0], 'Portfolio_teórico': [
-                                     initial_portfolio_value_teorico], 'Portfolio_real': [initial_portfolio_value_real], 'Operaciones': [0]})
+# Calcular el rendimiento anualizado del portafolio
+annualized_return_teorico = (
+    portfolio_values_series_teorico.iloc[-1] / initial_portfolio_value_teorico) ** (1 / total_period_years_months) - 1
+annualized_return_real = (
+    portfolio_values_series_real.iloc[-1] / initial_portfolio_value_teorico) ** (1 / total_period_years_months) - 1
 
-    # Rendimiento
-    return_period_teorico = portfolio_values_series_teorico.iloc[-1] / \
-        initial_portfolio_value_teorico - 1
-    return_period_real = portfolio_values_series_real.iloc[-1] / \
-        initial_portfolio_value_teorico - 1
+# Calcular la volatilidad del portafolio
+volatility = portfolio_values_series_teorico.pct_change(
+).std() * np.sqrt(12)  # Anualizar la volatilidad
 
-    # Insertar la nueva fila en la posición 0:
-    df_backtesting = pd.concat(
-        [portfolio_initial, df_backtesting]).reset_index(drop=True)
+# Calcular el Ratio de Sharpe
+sharpe = sharpe_ratio(portfolio_values_series_teorico.pct_change())
 
-    # Calcular la c7o   orrelación entre los activos
-    correlation_matrix = monthly_returns.corr()
+# Calcular el Ratio de Sortino
+sortino = sortino_ratio(portfolio_values_series_teorico.pct_change())
 
-    # Imprimir el total de cambios de activos
-    print(
-        f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
+# Calcular el Máximo Drawdown
+max_dd = calculate_max_drawdown(portfolio_values_series_teorico.pct_change())
 
-    # Graficar el valor del portafolio en escala logarítmica
-    plt.figure(figsize=(12, 6))
-    plt.semilogy(portfolio_values_series_teorico, label='Valor del Portafolio')
-    plt.title(
-        'Valor del Portafolio Basado en Estrategia de Momentum (Escala Logarítmica)')
-    plt.xlabel('Fecha')
-    plt.ylabel('Valor del Portafolio (log)')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+# Calcular el peor año
+portfolio_returns = pd.DataFrame(
+    {'date': portfolio_values_series_teorico.index, 'return': portfolio_values_series_teorico.pct_change()})
+worst_yr, worst_yr_return = worst_year(portfolio_returns)
 
-    # Graficar el rendimiento acumulado del portafolio
-    plt.figure(figsize=(12, 6))
-    # Agregar 1 para evitar log(0)
-    plt.semilogy(cumulative_returns_teorico + 1,
-                 label='Rendimiento Acumulado del Portafolio')
-    plt.title(
-        'Rendimiento Acumulado del Portafolio Basado en Estrategia de Momentum')
-    plt.xlabel('Fecha')
-    plt.ylabel('Rendimiento Acumulado')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+# Calcular el mejor año
+portfolio_returns = pd.DataFrame(
+    {'date': portfolio_values_series_teorico.index, 'return': portfolio_values_series_teorico.pct_change()})
+best_yr, best_yr_return = best_year(portfolio_returns)
 
-    # Mostrar las métricas del portafolio
-    print(
-        f"Rendimiento final del portafolio teórico: {return_period_teorico:.2%}")
-    print(f"Rendimiento final del portafolio real: {return_period_real:.2%}")
-    print(
-        f"Rendimiento anualizado del portafolio teórico: {annualized_return_teorico:.2%}")
-    print(
-        f"Rendimiento anualizado del portafolio real: {annualized_return_real:.2%}")
-    print(
-        f"Pérdida porcentual total por coste operacional: {(return_period_real / return_period_teorico - 1):.2%}")
-    print(
-        f"Pérdida porcentual anualizada por coste operacional: {(annualized_return_real / annualized_return_teorico - 1):.2%}")
-    print(f"Volatilidad anualizada del portafolio: {volatility:.2%}")
-    print(f"Ratio de Sharpe: {sharpe:.2f}")
-    print(f"Ratio de Sortino: {sortino:.2f}")
-    print(f"Máximo Drawdown porcentual: {max_dd:.2%}")
-    print(f"Peor año: {worst_yr} con un rendimiento de {worst_yr_return:.2%}")
-    print(f"Mejor año: {best_yr} con un rendimiento de {best_yr_return:.2%}")
+# Mostrar las decisiones de inversión
+df_backtesting = pd.DataFrame(data=investment_decisions, columns=[
+                              'Fecha', 'Activo', 'Rendimiento', 'Portfolio_teórico', 'Precio', 'SMA_10_W', 'Momentum'])
+df_backtesting['Fecha'] = df_backtesting['Fecha'].dt.strftime('%Y-%m-%d')
+df_backtesting['Operaciones'] = operations
+df_backtesting['Rendimiento_acumulado'] = rendimiento_acumulado
+df_backtesting['Portfolio_real'] = portfolio_values_real
 
-    # Mostrar la correlación entre los activos
-    print("Correlación entre los activos:")
-    print(correlation_matrix)
+# Datos de la nueva fila
+portfolio_initial = pd.DataFrame({'Fecha': [start_dat], 'Activo': [0], 'Rendimiento': [0], 'Portfolio_teórico': [
+                                 initial_portfolio_value_teorico], 'Portfolio_real': [initial_portfolio_value_real], 'Operaciones': [0]})
 
-    # Mostrar la correlación entre los activos con un mapa de calor
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(correlation_matrix, annot=True,
-                cmap='coolwarm', center=0, vmin=-1, vmax=1)
-    plt.title('Matriz de Correlación entre los Activos')
-    plt.show()
+# Rendimiento
+return_period_teorico = portfolio_values_series_teorico.iloc[-1] / \
+    initial_portfolio_value_teorico - 1
+return_period_real = portfolio_values_series_real.iloc[-1] / \
+    initial_portfolio_value_teorico - 1
 
+# Insertar la nueva fila en la posición 0:
+df_backtesting = pd.concat(
+    [portfolio_initial, df_backtesting]).reset_index(drop=True)
 
-# Mostrar resultados del backtest
-st.write("Resultados del backtest para la estrategia seleccionada y los activos elegidos.")
+print('portfolio_final', portfolio_values_series_teorico.iloc[-1])
+print('portfolio_inicial', initial_portfolio_value_teorico)
+
+# Calcular la correlación entre los activos
+correlation_matrix = monthly_returns.corr()
+
+# Imprimir el total de cambios de activos
+print(
+    f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
+
+df_investment_decisions = pd.DataFrame(investment_decisions, columns=[
+                                       'date', 'best_asset', 'asset_return', 'portfolio_value_teorico', 'best_monthly_price', 'average_price', 'best_momentum'])
+print(df_investment_decisions.tail())
+
+# Graficar el valor del portafolio en escala logarítmica
+plt.figure(figsize=(12, 6))
+plt.semilogy(portfolio_values_series_teorico, label='Valor del Portafolio')
+plt.title(
+    'Valor del Portafolio Basado en Estrategia de Momentum (Escala Logarítmica)')
+plt.xlabel('Fecha')
+plt.ylabel('Valor del Portafolio (log)')
+plt.legend()
+plt.grid(True)
+st.pyplot(plt)
+
+# Graficar el rendimiento acumulado del portafolio
+plt.figure(figsize=(12, 6))
+# Agregar 1 para evitar log(0)
+plt.semilogy(cumulative_returns_teorico + 1,
+             label='Rendimiento Acumulado del Portafolio')
+plt.title(
+    'Rendimiento Acumulado del Portafolio Basado en Estrategia de Momentum')
+plt.xlabel('Fecha')
+plt.ylabel('Rendimiento Acumulado')
+plt.legend()
+plt.grid(True)
+st.pyplot(plt)
+
+# Mostrar las métricas del portafolio
+st.write(
+    f"Rendimiento final del portafolio teórico: {return_period_teorico:.2%}")
+st.write(
+    f"Rendimiento final del portafolio real: {return_period_real:.2%}")
+st.write(
+    f"Rendimiento anualizado del portafolio teórico: {annualized_return_teorico:.2%}")
+st.write(
+    f"Rendimiento anualizado del portafolio real: {annualized_return_real:.2%}")
+st.write(
+    f"Pérdida porcentual total por coste operacional: {(return_period_real / return_period_teorico - 1):.2%}")
+st.write(
+    f"Pérdida porcentual anualizada por coste operacional: {(annualized_return_real / annualized_return_teorico - 1):.2%}")
+st.write(f"Volatilidad anualizada del portafolio: {volatility:.2%}")
+st.write(f"Ratio de Sharpe: {sharpe:.2f}")
+st.write(f"Ratio de Sortino: {sortino:.2f}")
+st.write(f"Máximo Drawdown porcentual: {max_dd:.2%}")
+st.write(
+    f"Peor año: {worst_yr} con un rendimiento de {worst_yr_return:.2%}")
+st.write(
+    f"Mejor año: {best_yr} con un rendimiento de {best_yr_return:.2%}")
+
+# Mostrar la correlación entre los activos con un mapa de calor
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True,
+            cmap='coolwarm', center=0, vmin=-1, vmax=1)
+plt.title('Matriz de Correlación entre los Activos')
+st.pyplot(plt)
