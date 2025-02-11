@@ -18,13 +18,27 @@ estrategia = st.selectbox("Elige una estrategia de inversión",
                            "Estrategia de rebalanceo con los 5 activos según Ivy Portfolio"])
 
 # Lista de tickers de los activos
-tickers = ['SPY', 'AGG', 'IYR', 'EFA', 'GSG', 'BIL']
+tickers = ['SPY', 'EFA', 'IYR', 'GSG', 'AGG', 'BIL']
+tickers_1 = ['VTI', 'VEU', 'VNQ', 'DBC', 'BND', 'BIL']
 
-# Selección de activos
-activos = st.multiselect("Selecciona los activos", tickers)
+# Crear un diccionario para las listas de activos
+tickers_dict = {
+    "ETFs BlackRock": tickers,
+    "ETFs Vanguard": tickers_1
+}
+
+# Selección de lista de activos
+lista_activos_seleccionada = st.selectbox(
+    "Selecciona la lista de activos", list(tickers_dict.keys()))
+activos = tickers_dict[lista_activos_seleccionada]
+
+# Mostrar los activos seleccionados
+st.write("Has seleccionado los siguientes activos:")
+st.write(activos)
+
 
 # Parámetros para el backtest
-min_value = datetime(2024, 1, 1)
+min_value = datetime(2007, 12, 31)
 max_value = datetime.today()
 
 parametros = st.slider(
@@ -157,7 +171,7 @@ rendimiento = []
 rendimiento_acumulado = []
 
 # Inicializar el valor del portafolio teórico (sin comisiones)
-initial_portfolio_value_teorico = 10000
+initial_portfolio_value_teorico = 100
 portfolio_value_teorico = initial_portfolio_value_teorico
 
 # Costos por comisión y spread compra-venta (faltan los impuestos) - Revisar estructura de costes de IBKR
@@ -311,26 +325,33 @@ print('portfolio_inicial', initial_portfolio_value_teorico)
 # Calcular la correlación entre los activos
 correlation_matrix = monthly_returns.corr()
 
-# Imprimir el total de cambios de activos
-print(
-    f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
+# Graficar el rendimiento acumulado del portafolio
+fig, ax = plt.subplots(figsize=(12, 6))
+# Agregar 1 para evitar log(0)
+ax.semilogy(portfolio_values_series_teorico,
+            label='Rendimiento acumulado en escala logarítmica')
+ax.set_title(
+    'Rendimiento acumulado del portfolio según estrategia seleccionada sin comisiones')
+ax.set_xlabel('Fecha')
+ax.set_ylabel('Rendimiento acumulado (log)')
+ax.legend()
+ax.grid(True)
+st.pyplot(fig)
 
+
+# Mostrar un mensaje antes de la tabla
+st.write("Selección de activos para los últimos 4 meses y el mes actual aún está por decidirse:")
+
+# Crear un DataFrame con las decisiones de inversión
 df_investment_decisions = pd.DataFrame(investment_decisions, columns=[
                                        'date', 'best_asset', 'asset_return', 'portfolio_value_teorico', 'best_monthly_price', 'average_price', 'best_momentum'])
-print(df_investment_decisions.tail())
 
-# Graficar el rendimiento acumulado del portafolio
-plt.figure(figsize=(12, 6))
-# Agregar 1 para evitar log(0)
-plt.semilogy(cumulative_returns_teorico + 1,
-             label='Rendimiento acumulado en escala logarítmica')
-plt.title(
-    'Rendimiento acumulado del portfolio según estrategia seleccionada')
-plt.xlabel('Fecha')
-plt.ylabel('Rendimiento acumulado')
-plt.legend()
-plt.grid(True)
-st.pyplot(plt)
+# Mostrar las últimas filas del DataFrame
+st.write(df_investment_decisions.tail())
+
+# Imprimir el total de cambios de activos
+st.write(
+    f"Total de operaciones concertadas durante el período del backtest: {change_count} - Promedio de operaciones por año: {(change_count/total_period_years):.2f}")
 
 # Mostrar las métricas del portafolio
 st.write(
@@ -352,8 +373,8 @@ st.write(
     f"Mejor año: {best_yr} con un rendimiento de {best_yr_return:.2%}")
 
 # Mostrar la correlación entre los activos con un mapa de calor
-plt.figure(figsize=(10, 8))
-sns.heatmap(correlation_matrix, annot=True,
-            cmap='coolwarm', center=0, vmin=-1, vmax=1)
-plt.title('Matriz de Correlación entre los Activos')
-st.pyplot(plt)
+fig, ax = plt.subplots(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm',
+            center=0, vmin=-1, vmax=1, ax=ax)
+ax.set_title('Matriz de Correlación entre los Activos')
+st.pyplot(fig)
