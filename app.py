@@ -32,6 +32,7 @@ lista_activos_seleccionada = st.selectbox(
     "Selecciona la lista de activos", list(tickers_dict.keys()))
 activos = tickers_dict[lista_activos_seleccionada]
 
+
 # Mostrar los activos seleccionados
 st.write("Has seleccionado los siguientes activos:")
 st.write(activos)
@@ -63,7 +64,7 @@ def calculate_momentum(prices, lookback_period):
 
 
 def get_historical_data(tickers, start_date, end_date):
-    data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+    data = yf.download(activos, start=start_date, end=end_date)['Adj Close']
     return data
 
 # Función para calcular el Ratio de Sharpe
@@ -144,7 +145,7 @@ print("difference_months", difference_months)
 print('total_period_years_months', total_period_years_months)
 
 # Obtener los datos históricos de los activos
-historical_data = get_historical_data(tickers, start_dat, end_date)
+historical_data = get_historical_data(activos, start_dat, end_date)
 
 # Calcular los retornos mensuales
 monthly_prices = historical_data.resample('ME').ffill()
@@ -159,7 +160,7 @@ momentum = calculate_momentum(monthly_prices, lookback_period)
 # Calcular el momentum para cada activo y agregarlos a un DataFrame
 df_momentum = pd.DataFrame()
 
-for ticker in tickers:
+for ticker in activos:
     df_momentum[ticker +
                 '_mom'] = calculate_momentum(monthly_prices[ticker], lookback_period)
 
