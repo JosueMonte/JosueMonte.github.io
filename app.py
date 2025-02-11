@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -16,17 +17,25 @@ estrategia = st.selectbox("Elige una estrategia de inversión",
                            "Estrategia de momentum con los mejores tres activos según Ivy Portfolio",
                            "Estrategia de rebalanceo con los 5 activos según Ivy Portfolio"])
 
+# Lista de tickers de los activos
+tickers = ['SPY', 'AGG', 'IYR', 'EFA', 'GSG', 'BIL']
+
 # Selección de activos
-activos = st.multiselect("Selecciona los activos", [
-                         "SPY", "EFA", "IYR", "GSG", "AGG"])
+activos = st.multiselect("Selecciona los activos", tickers)
 
 # Parámetros para el backtest
+min_value = datetime(2024, 1, 1)
+max_value = datetime.today()
+
 parametros = st.slider(
     "Selecciona el rango de fechas para el backtest:",
-    min_value=datetime(2012, 1, 1),
-    max_value=datetime.today(),
-    value=(datetime(2012, 1, 1), datetime.today())
+    min_value=min_value,
+    max_value=max_value,
+    value=(min_value, max_value)
 )
+
+# Vincular las variables con los parámetros seleccionados
+start_date, end_date = parametros
 
 # Definición de funciones
 # Función para calcular el momentum
@@ -102,13 +111,9 @@ if st.button("Ejecutar Backtest"):
     st.write("Rango de fechas seleccionado:", start_date.strftime(
         '%Y-%m-%d'), "a", end_date.strftime('%Y-%m-%d'))
 
-    # Fechas de inicio y fin para obtener los datos históricos
-today = datetime.today()
-end_date = today
-start_date = datetime(2024, 1, 1)
 
 # Calculate the difference in months
-difference_months = (end_date.year - start_date.year - 1) * \
+difference_months = (end_date.year - start_date.year) * \
     12 + end_date.month - start_date.month
 
 # Convert the difference in months to years
@@ -314,26 +319,15 @@ df_investment_decisions = pd.DataFrame(investment_decisions, columns=[
                                        'date', 'best_asset', 'asset_return', 'portfolio_value_teorico', 'best_monthly_price', 'average_price', 'best_momentum'])
 print(df_investment_decisions.tail())
 
-# Graficar el valor del portafolio en escala logarítmica
-plt.figure(figsize=(12, 6))
-plt.semilogy(portfolio_values_series_teorico, label='Valor del Portafolio')
-plt.title(
-    'Valor del Portafolio Basado en Estrategia de Momentum (Escala Logarítmica)')
-plt.xlabel('Fecha')
-plt.ylabel('Valor del Portafolio (log)')
-plt.legend()
-plt.grid(True)
-st.pyplot(plt)
-
 # Graficar el rendimiento acumulado del portafolio
 plt.figure(figsize=(12, 6))
 # Agregar 1 para evitar log(0)
 plt.semilogy(cumulative_returns_teorico + 1,
-             label='Rendimiento Acumulado del Portafolio')
+             label='Rendimiento acumulado en escala logarítmica')
 plt.title(
-    'Rendimiento Acumulado del Portafolio Basado en Estrategia de Momentum')
+    'Rendimiento acumulado del portfolio según estrategia seleccionada')
 plt.xlabel('Fecha')
-plt.ylabel('Rendimiento Acumulado')
+plt.ylabel('Rendimiento acumulado')
 plt.legend()
 plt.grid(True)
 st.pyplot(plt)
@@ -347,10 +341,7 @@ st.write(
     f"Rendimiento anualizado del portafolio teórico: {annualized_return_teorico:.2%}")
 st.write(
     f"Rendimiento anualizado del portafolio real: {annualized_return_real:.2%}")
-st.write(
-    f"Pérdida porcentual total por coste operacional: {(return_period_real / return_period_teorico - 1):.2%}")
-st.write(
-    f"Pérdida porcentual anualizada por coste operacional: {(annualized_return_real / annualized_return_teorico - 1):.2%}")
+
 st.write(f"Volatilidad anualizada del portafolio: {volatility:.2%}")
 st.write(f"Ratio de Sharpe: {sharpe:.2f}")
 st.write(f"Ratio de Sortino: {sortino:.2f}")
