@@ -63,13 +63,10 @@ def calculate_momentum(prices, lookback_period):
 # Función para obtener los datos históricos de los activos
 
 
+# Función para obtener los datos históricos de los activos
 def get_historical_data(tickers, start_date, end_date):
-    data = yf.download(tickers, start=start_date, end=end_date)
-
-    if 'Adj Close' in data:
-        return data['Adj Close']
-    else:
-        raise KeyError("'Adj Close' no se encuentra en los datos descargados.")
+    data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+    return data
 
 
 # Función para calcular el Ratio de Sharpe
