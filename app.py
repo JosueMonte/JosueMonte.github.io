@@ -149,6 +149,7 @@ print('total_period_years_months', total_period_years_months)
 # Obtener los datos históricos de los activos
 historical_data = get_historical_data(activos, start_dat, end_date)
 
+
 # Calcular los retornos mensuales
 monthly_prices = historical_data.resample('ME').ffill()
 monthly_returns = monthly_prices.pct_change()
