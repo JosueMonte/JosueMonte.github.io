@@ -1,8 +1,15 @@
 const username = "JosueMonte";
 
 const exclude = [
-  "JosueMonte.github.io"
+    "JosueMonte.github.io",
+    "Big-data-con-Docker",
+    "JosueMonte",
+    "Python",
+    "tesla-valuation",
+    "ypf_valuation",
+    "Python-Prep"
 ];
+
 
 async function loadRepos() {
   const container = document.getElementById("repo-list");
