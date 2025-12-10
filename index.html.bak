@@ -143,38 +143,32 @@
         </section>
         <section id="projects" class="mb-5">
             <h2 class="text-primary">Projects</h2>
-
-            <!-- Contenedor donde se crearán las cards automáticamente -->
-            <div id="repo-list" class="row"></div>
-
-            <!-- Botón para ir a GitHub -->
-            <div class="mt-3">
-                <a class="btn btn-outline-primary" 
-                href="https://github.com/JosueMonte?tab=repositories" 
-                target="_blank">
-                Ver todos mis repositorios en GitHub <i class="fab fa-github"></i>
-                </a>
+            <div class="card-deck">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title text-primary">Portfolio Management</h4>
+                        <p class="card-text">A backtest of momentum strategy based on the Ivy Portfolio book.</p>
+                        <a href="https://portfolio-management-backtest.streamlit.app/" class="btn btn-primary">Prueba
+                            mis estrategias de inversión interactivas aquí</a>
+                        <br>
+                        <a href="https://github.com/JosueMonte/Portfolio-management-con-Python"
+                            class="btn btn-outline-primary mt-2">
+                            <i class="fab fa-github"></i> GitHub Repository
+                        </a>
+                    </div>
+                </div>
             </div>
-            </section>
-
-            <!-- Sección del Blog de Medium -->
-            <section id="blog" class="mb-5">
-                <h2 class="text-primary">Últimos artículos en Medium</h2>
-                <div id="blog-container" class="row"></div>
-            </section>
-
-
+        </section>
         <!-- Sección de Contact Me -->
         <section id="contact" class="mb-5">
             <h2 class="text-primary">Get in touch</h2>
             <p>Alternatively, feel free to reach out directly by email at <a
-                    href="mailto:josuemonte2025@gmail.com">josuemonte2025@gmail.com</a>.</p>
+                    href="mailto:josue.monte@outlook.com">josue.monte@outlook.com</a>.</p>
         </section>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="script.js"></script>
 </body>
 
 </html>
